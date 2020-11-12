@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit/Delete Transaction</title>
+    <link rel="stylesheet" href="./editDeleteTransactionWindow.css">
+</head>
+<body>
+    <div class="mainDiv">
+        <div style="display:flex;align-items:center;justify-content:center;width: 100%;">
+            <button class="warning btn">Edit</button> <p style="margin-left: 20px;"> this transaction </p>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center">
+            <button class="danger btn" >Delete</button> <p style="margin-left: 20px;"> this transaction </p>
+        </div>
+    </div>
+
+    <script>
+        const editBtn = document.querySelector('.warning');
+        const deleteBtn = document.querySelector('.danger');
+        const {ipcRenderer, remote} =  require('electron');
+        const url = require('url');
+        const path = require('path');
+        const {BrowserWindow} = remote;
+        let thisWin = remote.getCurrentWindow();
+        let editWindow;
+        let details;
+
+        editBtn.addEventListener('click',function(){
+            // ipcRenderer.send('update-transaction');
+            createAddWindow();
+            // thisWin.close();
+        })
+        
+        deleteBtn.addEventListener('click',function(){
+            ipcRenderer.send('delete-transaction',details)
+            thisWin.close();
+        })
+
+        ipcRenderer.on('send-the-row-details',function(e, rowData){
+            details=rowData;
+        })
+
+        function createAddWindow(){
+            editWindow = new BrowserWindow({
+                width: 600,
+                height:600,
+                title:'Edit Transactions',
+                parent: remote.getCurrentWindow(),
+                modal: true,
+                show: true
+            });
+            editWindow.loadURL(url.format({
+                pathname: path.join(__dirname, 'editWindow.html'),
+                protocol: 'file:',
+                slashes:true
+            }));
+
+            editWindow.webContents.on('did-finish-load', function(){
+                editWindow.webContents.send('load-current-details',details);
+            })
+
+            thisWin.on('close' , function(){
+                thisWin = null;
+            })
+
+            // Handle garbage collection
+            editWindow.on('close', function(){
+                thisWin.close();
+                editWindow = null;
+            });
+        }
+    </script>
+</body>
+</html>

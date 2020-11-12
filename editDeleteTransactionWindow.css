@@ -1,0 +1,35 @@
+body{
+    margin: 0;
+    font-family: sans-serif;
+}
+
+.mainDiv{
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.btn{
+    padding:10px 20px;
+    color: white;
+    border-radius: 5px;
+}
+
+.warning{
+    background-color: #d8d516;
+}
+
+.warning:hover{
+    background-color: #c7bc2b;
+}
+
+.danger{
+    background-color: #f44336;  
+}
+
+.danger:hover{
+    background-color: #da190b;  
+}

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ShoppingList</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css">
+  <link rel="stylesheet" href="./mainWindow.css">
+</head>
+<body>
+
+  <div style="display:flex;align-items: center;justify-content: space-between;width:100%;">
+    <h4>Particular Subsidiary Ledger</h4>
+    <div style="display:flex;align-items:center;justify-content: space-around;">
+      <button class="reportButton">GENERATE END OF REPORT</button>
+    </div>
+  </div>
+  <h6>2.175</h6>
+  <div style="display:flex;align-items: center;justify-content: space-between;width:100%;">
+    <h5>Yaqoob Khatki</h5>
+    <div class="filteredBy">
+      <p style="font-size:18px"></p>
+    </div>
+  </div>
+
+  <table>
+
+  </table>
+
+  <script>
+    const electron = require('electron');
+    const {ipcRenderer,ipcMain,remote} = electron;
+    const {BrowserWindow} = remote;
+    const tableDiv = document.querySelector('.tableDiv');
+    let generatedEndOfReport = false;    
+    const table = document.querySelector('table');
+    const filteredBy = document.querySelector('.filteredBy p');
+    const url = require('url');
+    const path = require('path');
+    let edit_delete_window;
+    let filtered_by_entity;
+
+    ipcRenderer.on('filteredby-conditions',showFilteredByConditions);
+
+    function showFilteredByConditions(e, filterBy) {
+      filteredBy.innerHTML = '';
+      const {date, month_year, year} = filterBy;
+      if(date){
+        filtered_by_entity = {date};
+        filteredBy.innerHTML = `<span style="display:flex"><b>Date:</b> ${date}</span>`;
+      }
+      else if(month_year){
+        filtered_by_entity = {month_year};
+        filteredBy.textContent = `${month_year}`;
+      }
+      else if(year){ 
+        filtered_by_entity = {year};
+        filteredBy.innerHTML = `<span style="display:flex"><b>Year : </b> ${year}</span>`;
+      }
+    }
+
+    ipcRenderer.on('load-filtered-data',populateTable);
+
+    function populateTable(e, filteredTransactions){
+
+      const transactions = JSON.parse(filteredTransactions);
+
+      table.innerHTML = '';
+
+      const tr = document.createElement('tr');
+      tr.className = 'thStyle';
+      tr.innerHTML = `
+        <th>Date</th>
+        <th>Voucher</th>
+        <th>Particulars</th>
+        <th>Qty</th>
+        <th>Rate</th>
+        <th>Debit</th>
+        <th>Credit</th>
+        <th>Balance</th>
+      `;
+
+      table.appendChild(tr);
+
+      transactions.forEach(transaction => {
+        const tr = document.createElement('tr');
+        tr.className = 'tdStyle';
+        tr.setAttribute('data-id', transaction._id);
+        tr.innerHTML = `
+          <td style="text-align:left">${transaction.date}</td>
+          <td style="text-align:left">${transaction.voucher}</td>
+          <td style="text-align:left">${transaction.Particulars}</td>
+          <td id="qty" style="text-align:left">${transaction.Qty}</td>
+          <td style="text-align:left">${transaction.Rate}</td>
+          <td id="dr" style="text-align:left">${transaction.Debit}</td>
+          <td id="cr" style="text-align:left">${transaction.Credit}</td>
+          <td id="blnc" style="text-align:left">${transaction.Balance}</td>
+      `;
+        table.appendChild(tr);
+      })
+    }
+
+    document.querySelector('.reportButton').addEventListener('click',function generateEndOfReport(){
+      if(generatedEndOfReport)return;
+
+      let allDebits = entityToReduce(extractValues('dr'));
+      let allQuantities = entityToReduce(extractValues('qty'));
+      let allCredits = entityToReduce(extractValues('cr'));
+      let allBalances = balancesReduction(extractValues('blnc'));
+      
+      if(allBalances>0){
+        allBalances = allBalances + ' Dr';
+      }
+      else if(allBalances<0){
+        allBalances = (allBalances * (-1)) + ' Cr';
+      } 
+
+      const tr = document.createElement('tr');
+      tr.style.borderTop = '3px solid #888888';
+      tr.className = 'report_row';
+      tr.innerHTML = `
+        <td style="text-align:left">End Of Report</td>
+        <td style="text-align:left"></td>
+        <td style="text-align:left"><b>Grand Total</b></td>
+        <td style="text-align:left;border-top: 3px solid black;border-bottom: double 6px">${allQuantities}</td>
+        <td></td>
+        <td style="text-align:left;border-top: 3px solid black;border-bottom: double 6px">${allDebits}</td>
+        <td style="text-align:left;border-top: 3px solid black;border-bottom: double 6px">${allCredits}</td>
+        <td style="text-align:left">${allBalances}</td>
+      `;
+      table.appendChild(tr);
+      generatedEndOfReport = true;
+    });
+
+    function entityToReduce(entities){
+      return entities.reduce((sum,quantity)=>{
+        quantity = quantity.replace(/,/g,'');
+        return sum + parseInt(quantity)
+      },0)
+    }
+
+    function balancesReduction(blncEntities){
+
+      return blncEntities.reduce((sum,blncEntity)=>{
+
+        const blncArray = blncEntity.split(" ");
+
+        let amount = parseInt(blncArray[0].replace(/,/g,''));
+
+        if(blncArray[1]==='Cr' || blncArray[1] === 'cr')
+          amount = amount * -1;
+
+        return sum + amount;
+
+      },0)
+    }
+
+    function extractValues(SDE){
+      return Array.from(document.querySelectorAll(`#${SDE}`)).map(qtyDOMelement=>{
+        return qtyDOMelement.textContent;
+      })
+    }
+
+    table.addEventListener('dblclick', (e)=>{
+
+      if(e.target.tagName === 'TD' && e.target.parentElement.className !== 'report_row'){
+        edit_delete_window = new BrowserWindow({
+        width: 305,
+        height:180,
+        title:'Edit/Delete transaction',
+        parent: remote.getCurrentWindow(),
+        modal: true,
+        show: true,
+        });
+
+        edit_delete_window.setMenuBarVisibility(false)
+
+        edit_delete_window.loadURL(url.format({
+          pathname: path.join(__dirname, 'editDeleteTransactionWindow.html'),
+          protocol: 'file:',
+          slashes:true
+        }))
+
+        const rowDetails = {
+          rowData: Array.from(e.target.parentElement.children).map(td=>{
+            return td.innerText;
+          }),
+          filtered_by_entity,
+          id: e.target.parentElement.dataset.id
+        }
+
+        //BELOW THREE LINES TO SEND THE DATA TO THE EDIT/DELETE WINDOW 
+        edit_delete_window.webContents.on('did-finish-load',function(e){
+          edit_delete_window.webContents.send('send-the-row-details',rowDetails);
+        });
+      }
+    });
+
+    // function removeItem(e){
+    //   console.log('here');
+    //   edit_delete_window.on('close',function(){edit_delete_window=null});
+    //   edit_delete_window.close();
+    //   console.log('in the remove function');
+      // if(e.target.tagName === 'TD' && e.target.parentElement.className !== 'report_row'){
+      //   e.target.parentElement.remove();
+      //   ipcRenderer.send('delete-transaction',e.target.parentElement.dataset.id);
+      // }
+      // if(
+      //   (table.children.length === 1 && generatedEndOfReport===false) || 
+      //   (table.children.length === 2 && generatedEndOfReport===true)
+      // )
+      // {
+      //   table.innerHTML = '';
+      //   document.querySelector('.reportButton').remove();
+      //   document.querySelector('.report_row').remove();
+      // }
+    // }
+    
+    // function updateItem(e){
+    //   edit_delete_window.on('close',function(){edit_delete_window=null});
+    //   edit_delete_window.close();
+    //   console.log('in the updated function');
+      // if(e.target.tagName === 'TD' && e.target.parentElement.className !== 'report_row'){
+      //   e.target.parentElement.remove();
+      //   ipcRenderer.send('delete-transaction',e.target.parentElement.dataset.id);
+      // }
+      // if(
+      //   (table.children.length === 1 && generatedEndOfReport===false) || 
+      //   (table.children.length === 2 && generatedEndOfReport===true)
+      // )
+      // {
+      //   table.innerHTML = '';
+      //   document.querySelector('.reportButton').remove();
+      //   document.querySelector('.report_row').remove();
+      // }
+    // }
+
+  </script>
+</body>
+</html>

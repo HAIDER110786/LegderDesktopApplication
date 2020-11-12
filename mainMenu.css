@@ -1,0 +1,86 @@
+body{
+    margin: 0;
+    padding: 0;
+}
+
+.mainDiv{
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.innerMainDiv{
+    height: 100%;
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content:space-around;
+}
+
+.btn{
+    border:2px solid white;
+    background-color:#2e2c29;
+    color:white;
+    padding:10px;
+    width:210px;
+    font-size:20px;
+    transition:0.6s;
+}
+
+.btn:hover {
+    background-color:white;
+    color:#2e2c29;
+    transform: scale(1.1); 
+    border: 1px solid #2e2c29;
+}
+
+.btn:focus {
+    outline: none; 
+}
+
+.crossButton{
+    position: absolute;
+    font-size: 20px;
+    background-color: #2e2c29;
+    color:white;
+    border:none;
+    left:94%;
+}
+
+.crossButton:hover{
+    background-color:red;
+}
+
+.crossButton:focus{
+    outline:none;
+}
+
+.buttonDiv{
+    height:80%;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    margin-bottom: 10%;
+}
+
+.buttonDiv button{
+    margin: 10px;
+}
+
+.filterDiv{
+    display: flex;
+    height: 20%;
+    width: 100%;
+    flex-direction:row;
+    justify-content:space-around;
+    align-items:center;
+}
+
+.filterDiv select{
+    padding:10px 20px;
+}

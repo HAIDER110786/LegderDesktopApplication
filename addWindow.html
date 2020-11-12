@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Add Shopping Item</title>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.100.2/css/materialize.min.css"> -->
+  <link rel="stylesheet" href="./addWindow.css">
+</head>
+<body>
+  <div class="container">
+    <form class="TransForm">
+      <h1 style="margin:0px">Add Transaction</h1>
+      <input type="text" id="i1" placeholder="Enter voucher">
+      <textarea cols="50" id="i2" rows="5" placeholder="Enter particulars"></textarea>
+      <input type="text" id="i3" placeholder="Enter quantity">
+      <input type="text" id="i4" placeholder="Enter rate">
+      <input type="text" id="i5" placeholder="Enter debit">
+      <input type="text" id="i6" placeholder="Enter credit">
+      <input type="text" id="i7" placeholder="Enter balance">
+      <button type="submit">Record</button>
+    </form>
+  </div>
+
+  <script>
+    const electron = require('electron');
+    const {ipcRenderer} = electron;
+    const { dialog } = require('electron').remote;
+    let today = new Date();
+
+    document.querySelector('form').addEventListener('submit', submitForm);
+
+    function date(){
+      let dd = String(today. getDate()). padStart(2, '0');
+      let mm = String(today. getMonth() + 1). padStart(2, '0'); //January is 0!
+      let yyyy = today. getFullYear();
+      return mm + '/' + dd + '/' + yyyy;
+    }
+    
+    function submitForm(e){
+      e.preventDefault();   
+      let today = new Date();   
+      const voucher = document.querySelector('#i1').value.trim();
+      const Particulars = document.querySelector('#i2').value.trim();
+      const Qty = document.querySelector('#i3').value.trim();
+      const Rate = document.querySelector('#i4').value.trim();
+      const Debit = document.querySelector('#i5').value.trim();
+      const Credit = document.querySelector('#i6').value.trim();
+      const Balance = document.querySelector('#i7').value.trim().replace(/  +/g, ' ');
+
+      if(NoStartEndCommas(Qty) && isNumber(Qty.replace(/,/g,'')) &&
+      NoStartEndCommas(Rate) && isNumber(Rate.replace(/,/g,'')) &&
+      NoStartEndCommas(Debit) && isNumber(Debit.replace(/,/g,'')) &&
+      NoStartEndCommas(Credit) && isNumber(Credit.replace(/,/g,'')) &&
+      balanceToCheck(Balance))
+      {
+        const formData = {
+          date:date(),
+          voucher,
+          Particulars,
+          Qty,
+          Rate,
+          Debit,
+          Credit,
+          Balance,
+          month_year: String(today. getMonth() + 1). padStart(2, '0') + today.getFullYear(),
+          year: today.getFullYear()
+        }
+
+        ipcRenderer.send('item:add', formData);
+      }
+      else{
+        const options = {
+          type:"warning",
+          title : 'Invalid Transaction Entry',
+          message : 'Please enter a valid transaction entry'
+        }
+        dialog.showMessageBox(null,options);      
+      }
+    }
+
+
+      function balanceToCheck(balanceToBeValidated) {
+        const validatedBalance = balanceToBeValidated.split(' ');
+        if(validatedBalance.length>2)return false;
+
+        if(isNumber(validatedBalance[0].replace(/,/g,'')) && NoStartEndCommas(validatedBalance[0]) && 
+        (validatedBalance[1] === 'Cr'|| validatedBalance[1] === 'Dr' ||
+        validatedBalance[1] === 'cr' || validatedBalance[1] === 'dr')
+        ){
+          return true;
+        }
+        return false;
+      }
+
+      function NoStartEndCommas(n) { return (n[0]!==',' && n[n.length-1]!==',') ? true : false }
+
+      function isNumber(n) { return /^-?[\d.]+(?:e-?\d+)?$/.test(n); } 
+  </script>
+</body>
+</html>

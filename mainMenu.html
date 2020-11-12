@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Main Menu</title>
+  <link rel="stylesheet" href="./mainMenu.css">
+</head>
+<body>
+  <div class="mainDiv">
+    <div class="filterDiv"></div>
+    <div class="buttonDiv">
+      <button class="btn btn1">See a transaction</button>
+      <button class="btn btn2">Record transaction</button>
+    </div>
+  </div>
+
+  <script>
+    const electron = require('electron');
+    const {ipcRenderer} = electron;
+    //the dialog box is opened in the main thread, if you want to open it in the 
+    //rendered process, remember to access it using the remote
+    const {dialog} = electron.remote;
+    const filterDiv = document.querySelector('.filterDiv');
+
+    ipcRenderer.on('inject-the-years',(e,yearsFromDB)=>{
+      filterDiv.innerHTML = '';
+      //yearsFromDB[0]._doc.year will give the actual year
+      if(yearsFromDB[0].length === 0){
+        document.querySelector('.btn1').style.display = 'none';
+      }
+      else{
+        document.querySelector('.btn1').style.display = 'block';
+
+        makeDays();
+        makeMonths();
+        makeYears(yearsFromDB);
+      }
+    })
+
+    function makeYears(yearsFromDB){
+      let x = document.createElement("SELECT");
+      x.setAttribute("id", "years");
+
+      let z = document.createElement("option");
+      z.setAttribute("value", "");
+      let t = document.createTextNode("years");
+      z.appendChild(t);
+      x.appendChild(z);
+
+      const years = yearsFromDB.map(yearFromDB=>{
+        return yearFromDB._doc.year;
+      })
+
+      const uniqueYears = [...new Set(years)];
+
+      const sortedYears = uniqueYears.sort((a,b)=>b-a);
+
+      sortedYears.forEach(sortedYear=>{
+        x.appendChild(makeYearElements(sortedYear));
+      })
+      
+      filterDiv.appendChild(x);
+    }
+
+    function makeYearElements(i){
+      let z = document.createElement("option");
+      z.setAttribute("value", i);
+      let t = document.createTextNode(i);
+      z.appendChild(t);
+      return z;
+    }
+
+    function makeMonths(){
+      let x = document.createElement("SELECT");
+      x.setAttribute("id", "months");
+
+      let z = document.createElement("option");
+      z.setAttribute("value", "");
+      let t = document.createTextNode("months");
+      z.appendChild(t);
+      x.appendChild(z);
+
+      for (let i = 1; i <= 12; i++) {
+        x.appendChild(makeMonthElements(i));
+      }
+
+      filterDiv.appendChild(x);
+    }
+
+    function makeMonthElements(i){
+      var month = new Array();
+      month[1] = "January";
+      month[2] = "February";
+      month[3] = "March";
+      month[4] = "April";
+      month[5] = "May";
+      month[6] = "June";
+      month[7] = "July";
+      month[8] = "August";
+      month[9] = "September";
+      month[10] = "October";
+      month[11] = "November";
+      month[12] = "December";
+
+      let z = document.createElement("option");
+      z.setAttribute("value", month[i]);
+      let t = document.createTextNode(month[i]);
+      z.appendChild(t);
+      return z;
+    }
+
+    function makeDays(){
+      let x = document.createElement("SELECT");
+      x.setAttribute("id", "days");
+
+      let z = document.createElement("option");
+      z.setAttribute("value", "");
+      let t = document.createTextNode("days");
+      z.appendChild(t);
+      x.appendChild(z);
+
+      for (let i = 1; i<= 31; i++) {
+        x.appendChild(makeDayElements(i));
+      }
+
+      filterDiv.appendChild(x);
+    }
+
+    function makeDayElements(i){
+      let z = document.createElement("option");
+      z.setAttribute("value", i.toString());
+      let t = document.createTextNode(i.toString());
+      z.appendChild(t);
+      return z;
+    }
+
+    document.querySelector('.btn1').addEventListener('click',()=>{
+      const selectedDay = document.querySelector('#days').value;
+      const selectedMonth = document.querySelector('#months').value;
+      const selectedYear = document.querySelector('#years').value;
+      
+      if(selectedDay ==='' && selectedMonth === '' && selectedYear === ''){
+        //enter the date
+        dialogBoxShow('Enter the date');
+      }
+      else if(selectedDay !=='' && selectedMonth === '' && selectedYear === ''){
+        //enter the month and year
+        dialogBoxShow('Enter The month and year');
+      }
+      else if(selectedDay ==='' && selectedMonth !== '' && selectedYear === ''){
+        //enter either the year or the year along with the specific date
+        dialogBoxShow('Enter either the year or the year along with a specific date');
+      }
+      else if(selectedDay ==='' && selectedMonth === '' && selectedYear !== ''){
+        //We are fine here
+        ipcRenderer.send('see-transaction',{year:selectedYear});
+      }
+      else if(selectedDay !=='' && selectedMonth !== '' && selectedYear === ''){
+        //Enter the year
+        dialogBoxShow('Enter the year');
+      }
+      else if(selectedDay ==='' && selectedMonth !== '' && selectedYear !== ''){
+        //We are fine here
+        ipcRenderer.send('see-transaction',{month:selectedMonth, year:selectedYear});
+      }
+      else if(selectedDay !=='' && selectedMonth === '' && selectedYear !== ''){
+        //Enter the month
+        dialogBoxShow('Enter the month');
+      }
+      else if(selectedDay !=='' && selectedMonth !== '' && selectedYear !== ''){
+        //We are fine here
+        ipcRenderer.send('see-transaction',{day:selectedDay, month:selectedMonth, year:selectedYear});
+      }
+    })
+    
+    function dialogBoxShow(msg){
+      const options = {
+        type:"warning",
+        title : 'Invalid date',
+        message : msg
+      }
+      dialog.showMessageBox(null,options);
+    }
+    
+    document.querySelector('.btn2').addEventListener('click',()=>{
+      ipcRenderer.send('record-transaction');
+    })
+    
+    </script>
+
+</body>
+</html> 
